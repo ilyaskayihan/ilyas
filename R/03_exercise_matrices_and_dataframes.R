@@ -131,23 +131,19 @@ ex04SelectDF <- function(data, type) {
 # Your input may have different column names, but the first column will be named "sex".
 ex05Imputation <- function(data) {
 
- #  data %>% 
- #   mutate_if(is.numeric, ~replace_na(.,mean(., na.rm = TRUE)))
-  for (colname in colnames(data)) {
-    col <- data[[colname]]
-    data[[colname]][is.na(col)] <- mean(col, na.rm = TRUE)
-  }
-  data
+  
+ data %>%
+      group_by(sex) %>%
+      mutate_if(
+        is.numeric,
+        function(x) ifelse(is.na(x), mean(x, na.rm = TRUE),
+                           x))
+              
   }
  
-tatlim <- data.frame(
-     sex = factor(c("male", "male", "male", "female", "female", "female")),
-     height = c(178, 185, NA, 157, NA, 174), 
-     weight = c(95, 90, 99, 70, 77, NA),
-    age = c(23, NA, NA, NA, 21, 22))
 
-ex05Imputation(tatlim)
 
   library(tidyr)
 
 library(dplyr)
+

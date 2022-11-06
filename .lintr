@@ -1,0 +1,99 @@
+linters: list(
+    T_and_F_symbol_linter,
+    absolute_path_linter,
+    nonportable_path_linter,
+    assignment_linter,
+    open_curly_linter(TRUE),
+    closed_curly_linter(TRUE),
+    paren_brace_linter,
+    commas_linter,
+    equals_na_linter,
+    semicolon_terminator_linter,
+    seq_linter,
+    single_quotes_linter,
+    spaces_inside_linter,
+    spaces_left_parentheses_linter,
+    # the following is adapted from 'https://github.com/jimhester/lintr', originally under MIT-license by James Hester
+    # change: allow `$`
+    modified_extraction_operator_linter = function (source_file)  {
+      tokens <- source_file[["parsed_content"]] <- filter_out_token_type(source_file[["parsed_content"]], "expr")
+      lapply(ids_with_token(source_file, c("'['"), fun = `%in%`), 
+	function(token_num) {
+	  if (is_bracket_extract(token_num, tokens)) {
+	    token <- with_id(source_file, token_num)
+	    start_col_num <- token[["col1"]]
+	    end_col_num <- token[["col2"]]
+	    line_num <- token[["line1"]]
+	    line <- source_file[["lines"]][[as.character(line_num)]]
+	    Lint(filename = source_file[["filename"]], line_number = line_num, 
+	      column_number = start_col_num, type = "warn", 
+	      message = sprintf("Use `[[` instead of `%s`  to extract an element.", 
+		token[["text"]]), line = line, linter = "modified_extraction_operator_linter", 
+	      ranges = list(c(start_col_num, end_col_num)))
+	  }
+      })
+    },
+    function_left_parentheses_linter,
+    # the following is adapted from 'https://github.com/jimhester/lintr', originally under MIT-license by James Hester
+    # change: we forbid L, instead of allowing it
+    disallow_explicit_integer_linter = function(source_file) {
+      lapply(ids_with_token(source_file, "NUM_CONST"), function(id) {
+	token <- with_id(source_file, id)
+	if (!(endsWith(token[["text"]], "L"))) return(NULL)
+	line_num <- token[["line2"]]
+	end_col_num <- token[["col2"]]
+	start_col_num <- token[["col1"]]
+	Lint(filename = source_file[["filename"]], line_number = line_num, 
+	  column_number = end_col_num + 1L, type = "style", 
+	  message = "Integers should be implicit. Don't use the 1L form.",
+	  line = source_file[["lines"]][[as.character(line_num)]], 
+	  ranges = list(c(start_col_num, end_col_num)), 
+	  linter = "implicit_integer_linter")
+      })
+    },
+    infix_spaces_linter,
+    line_length_linter(120),
+    no_tab_linter,
+    object_name_linter(c("dotted.case", "camelCase", "CamelCase")),
+    trailing_blank_lines_linter,
+    trailing_whitespace_linter,
+    undesirable_function_linter(list(
+      attach = "access elements directly",
+      library = NA,
+      require = NA,
+      setwd = "access files by paths relative to base directory",
+      parse = NA,
+      source = NA,
+      system = NA,
+      system2 = NA,
+      browser = NA,
+      q = NA,
+      integrate,
+      sapply,
+      .libPaths = NA)),
+    undesirable_operator_linter(list(
+      `:::` = NA,
+      `::` = NA,
+      `<<-` = NA,
+      `->>` = NA,
+      `->` = "use <- only")),
+    comment_linter = function(source_file) {
+      lapply(ids_with_token(source_file, "COMMENT"), function(id) {
+        token <- with_id(source_file, id)
+	beginning <- substr(source_file$lines[[as.character(token$line1)]], 1, token$col1 - 1)
+	match <- re_matches(beginning, rex(anything, non_space), locations = TRUE)$end
+	if (is.na(match)) return(NULL)  # entire line is empty
+	if (token$col1 - 3 != match) {
+          Lint(filename = source_file$filename, line_number = token$line1,
+	    column_number = match + 1, type = "style",
+	    message = "Inline-Comment should be preceded by exactly two spaces",
+	    line = source_file$lines[[as.character(token$line1)]],
+	    ranges = list(c(match + 1, token$col1 - 1)),
+	    linter = "comment_linter")
+        }
+      })
+    },
+    unneeded_concatenation_linter
+  )
+exclude: "#^"
+exclude_start: "#^"
